@@ -41,8 +41,8 @@ This application helps users record **income and expenses**, track their **finan
 
 ### 1️⃣ Clone the repository
 ```bash
-git clone https://github.com/your-username/personal-finance-tracker.git
-cd personal-finance-tracker
+https://github.com/RAJI1741/PERSONAL-FINANCE-TRACKER.git
+cd PERSONAL-FINANCE-TRACKER
 ```
 
 
