@@ -45,26 +45,35 @@ https://github.com/RAJI1741/PERSONAL-FINANCE-TRACKER.git
 cd PERSONAL-FINANCE-TRACKER
 ```
 
-
+### 2️⃣Install required libraries
+```
 pip install streamlit pandas
+```
 
+
+### 3️⃣ Run the streamlit app
+```
 streamlit run personal-finance-tracker.py
-
+```
 
 📊 Application Screens
+
 🔹 Add Income
 Enter income amount
 Select category (Salary, Bonus, etc.)
 Choose date
+
 🔹 Add Expense
 Enter expense amount
 Select category (Food, Rent, Travel, etc.)
 Choose date
+
 🔹 View Report
 Displays:
 Total Income
 Total Expense
 Net Amount
+
 Shows full transaction history in a table
 
 
