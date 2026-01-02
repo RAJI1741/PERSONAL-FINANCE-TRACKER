@@ -72,7 +72,7 @@ menu = st.sidebar.radio(
 if menu == "Add Income":
     st.subheader("➕ Add Income")
 
-    amount = st.number_input("Income Amount", min_value=0.0, step=100.0)
+    amount = st.number_input("Income Amount", min_value=1.0, step=100.0)
     category = st.text_input("Income Category (Salary, Bonus, etc.)")
     trans_date = st.date_input("Date", value=date.today())
 
@@ -92,27 +92,27 @@ if menu == "Add Income":
 elif menu == "Add Expense":
     st.subheader("➖ Add Expense")
 
-    amount = st.number_input("Expense Amount", min_value=0.0, step=100.0)
+    amount = st.number_input("Expense Amount", min_value=1.0, step=100.0)
     category = st.text_input("Expense Category (Food, Rent, Travel, etc.)")
     trans_date = st.date_input("Date", value=date.today())
 
     if st.button("Add Expense"):
-    expense = Expense(amount, category, trans_date)
-    success = st.session_state.account.add_transaction(expense, "Expense")
+        expense = Expense(amount, category, trans_date)
+        success = st.session_state.account.add_transaction(expense, "Expense")
 
-    if success:
-        st.success("✅ Expense added successfully")
+        if success:
+            st.success("✅ Expense added successfully")
 
-        # 🔔 INSTANT ALERT CHECK
-        df = pd.DataFrame(st.session_state.account.transactions)
-        total_income = df[df["Type"] == "Income"]["Amount"].sum()
-        total_expense = df[df["Type"] == "Expense"]["Amount"].sum()
+            # 🚨 INSTANT ALERT CHECK
+            df = pd.DataFrame(st.session_state.account.transactions)
+            total_income = df[df["Type"] == "Income"]["Amount"].sum()
+            total_expense = df[df["Type"] == "Expense"]["Amount"].sum()
 
-        if total_expense > total_income:
-            st.error("🚨 Alert! Your expenses are now higher than your income!")
+            if total_expense > total_income:
+                st.error("🚨 Alert! Your expenses are now higher than your income!")
 
-    else:
-        st.error("❌ Amount must be greater than zero")
+        else:
+            st.error("❌ Amount must be greater than zero and category cannot be empty")
 
 
 # -----------------------------
@@ -128,7 +128,6 @@ elif menu == "View Report":
 
         total_income = df[df["Type"] == "Income"]["Amount"].sum()
         total_expense = df[df["Type"] == "Expense"]["Amount"].sum()
-
         net_amount = total_income - total_expense
 
         col1, col2, col3 = st.columns(3)
@@ -142,4 +141,3 @@ elif menu == "View Report":
 
         st.markdown("### 🧾 Transaction History")
         st.dataframe(df, use_container_width=True)
-
