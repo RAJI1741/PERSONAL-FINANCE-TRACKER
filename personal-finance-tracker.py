@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 from datetime import date
+import uuid
 
 # -----------------------------
 # Page Config
@@ -16,90 +16,114 @@ st.title("💰 Personal Finance Tracker")
 # -----------------------------
 # Session State
 # -----------------------------
+if "transactions" not in st.session_state:
+    st.session_state.transactions = []
+
 if "income_total" not in st.session_state:
     st.session_state.income_total = 0.0
 
 if "expense_total" not in st.session_state:
     st.session_state.expense_total = 0.0
 
-if "transactions" not in st.session_state:
-    st.session_state.transactions = []
-
 # -----------------------------
 # Sidebar Menu
 # -----------------------------
 menu = st.sidebar.radio(
-    "Select Option",
-    ["Add Income", "Add Expense", "View Report"]
+    "📌 Menu",
+    ["Add Transaction", "View Report"]
 )
 
 # -----------------------------
-# Add Income
+# Add Unified Transaction
 # -----------------------------
-if menu == "Add Income":
-    st.subheader("➕ Add Income")
+if menu == "Add Transaction":
+    st.subheader("➕ Add New Transaction")
 
-    amount = st.number_input(
-        "Income Amount",
-        min_value=1.0,
-        step=100.0
-    )
+    with st.form("transaction_form"):
+        txn_id = str(uuid.uuid4())[:8]
+        txn_date = st.date_input("📅 Date", value=date.today())
 
-    category = st.text_input("Income Category")
-    d = st.date_input("Date", value=date.today())
+        st.markdown("### 💵 Income (optional)")
+        income_amount = st.number_input(
+            "Income Amount",
+            min_value=0.0,
+            step=100.0
+        )
+        income_category = st.text_input("Income Source")
 
-    if st.button("Add Income"):
-        st.session_state.income_total += amount
-        st.session_state.transactions.append({
-            "Type": "Income",
-            "Amount": amount,
-            "Category": category,
-            "Date": d
-        })
-        st.success("✅ Income added successfully")
+        st.markdown("### ➖ Expense (optional)")
+        expense_amount = st.number_input(
+            "Expense Amount",
+            min_value=0.0,
+            step=100.0
+        )
+        expense_category = st.text_input("Expense Category")
 
-# -----------------------------
-# Add Expense
-# -----------------------------
-elif menu == "Add Expense":
-    st.subheader("➖ Add Expense")
+        submit = st.form_submit_button("✅ Submit Transaction")
 
-    amount = st.number_input(
-        "Expense Amount",
-        min_value=1.0,
-        step=100.0
-    )
+    if submit:
+        if income_amount == 0 and expense_amount == 0:
+            st.error("🚨 Enter at least income or expense")
+            st.stop()
 
-    category = st.text_input("Expense Category")
-    d = st.date_input("Date", value=date.today())
+        # Validate expense
+        if expense_amount > 0 and (
+            st.session_state.expense_total + expense_amount >
+            st.session_state.income_total + income_amount
+        ):
+            st.error("🚨 Expense exceeds available income")
+            st.stop()
 
-    if st.button("Add Expense"):
-        # Block expense if exceeds income
-        if st.session_state.expense_total + amount > st.session_state.income_total:
-            st.error("🚨 Expense exceeds income! Transaction not allowed.")
-        else:
-            st.session_state.expense_total += amount
+        # Save income
+        if income_amount > 0:
             st.session_state.transactions.append({
-                "Type": "Expense",
-                "Amount": amount,
-                "Category": category,
-                "Date": d
+                "Transaction ID": txn_id,
+                "Type": "Income",
+                "Amount": income_amount,
+                "Category": income_category,
+                "Date": txn_date
             })
-            st.success("✅ Expense added successfully")
+            st.session_state.income_total += income_amount
+
+        # Save expense
+        if expense_amount > 0:
+            st.session_state.transactions.append({
+                "Transaction ID": txn_id,
+                "Type": "Expense",
+                "Amount": expense_amount,
+                "Category": expense_category,
+                "Date": txn_date
+            })
+            st.session_state.expense_total += expense_amount
+
+        st.success("🎉 Transaction recorded successfully")
+
+        # -----------------------------
+        # Instant Download
+        # -----------------------------
+        df = pd.DataFrame(st.session_state.transactions)
+        latest_txn = df[df["Transaction ID"] == txn_id]
+
+        st.markdown("### ⬇️ Download Transaction Report")
+        st.download_button(
+            label="Download This Transaction (CSV)",
+            data=latest_txn.to_csv(index=False),
+            file_name=f"transaction_{txn_id}.csv",
+            mime="text/csv"
+        )
 
 # -----------------------------
 # View Report
 # -----------------------------
 elif menu == "View Report":
-    st.subheader("📊 Financial Report")
+    st.subheader("📊 Financial Summary")
+
+    net = st.session_state.income_total - st.session_state.expense_total
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Income", f"₹ {st.session_state.income_total:.2f}")
     col2.metric("Total Expense", f"₹ {st.session_state.expense_total:.2f}")
-    col3.metric(
-        "Net Amount",
-        f"₹ {(st.session_state.income_total - st.session_state.expense_total):.2f}"
-    )
+    col3.metric("Net Savings", f"₹ {net:.2f}")
 
     if not st.session_state.transactions:
         st.info("No transactions yet.")
@@ -108,61 +132,17 @@ elif menu == "View Report":
     df = pd.DataFrame(st.session_state.transactions)
     df["Date"] = pd.to_datetime(df["Date"])
 
-    st.markdown("## 📈 Visual Insights")
+    st.markdown("### 📈 Overview")
+    summary = df.groupby("Type")["Amount"].sum()
+    st.bar_chart(summary)
 
-    # -----------------------------
-    # Income vs Expense Bar Chart
-    # -----------------------------
-    st.subheader("💵 Income vs Expense")
-
-    summary_df = pd.DataFrame({
-        "Type": ["Income", "Expense"],
-        "Amount": [
-            st.session_state.income_total,
-            st.session_state.expense_total
-        ]
-    })
-
-    st.bar_chart(summary_df.set_index("Type"))
-
-    # -----------------------------
-    # Expense Category Pie Chart
-    # -----------------------------
-    expense_df = df[df["Type"] == "Expense"]
-
-    if not expense_df.empty:
-        st.subheader("🥧 Expense Breakdown by Category")
-
-        fig, ax = plt.subplots()
-        expense_df.groupby("Category")["Amount"].sum().plot(
-            kind="pie",
-            autopct="%1.1f%%",
-            startangle=90,
-            ax=ax
-        )
-        ax.set_ylabel("")
-        st.pyplot(fig)
-
-    # -----------------------------
-    # Cash Flow Over Time
-    # -----------------------------
-    st.subheader("📊 Cash Flow Over Time")
-
-    timeline_df = (
-        df.pivot_table(
-            index="Date",
-            columns="Type",
-            values="Amount",
-            aggfunc="sum",
-            fill_value=0
-        )
-        .sort_index()
-    )
-
-    st.line_chart(timeline_df)
-
-    # -----------------------------
-    # Transaction History
-    # -----------------------------
-    st.markdown("### 🧾 Transaction History")
+    st.markdown("### 🧾 All Transactions")
     st.dataframe(df, use_container_width=True)
+
+    st.markdown("### ⬇️ Download Full Report")
+    st.download_button(
+        label="Download Full Report (CSV)",
+        data=df.to_csv(index=False),
+        file_name="full_finance_report.csv",
+        mime="text/csv"
+    )
