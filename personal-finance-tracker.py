@@ -97,13 +97,22 @@ elif menu == "Add Expense":
     trans_date = st.date_input("Date", value=date.today())
 
     if st.button("Add Expense"):
-        expense = Expense(amount, category, trans_date)
-        success = st.session_state.account.add_transaction(expense, "Expense")
+    expense = Expense(amount, category, trans_date)
+    success = st.session_state.account.add_transaction(expense, "Expense")
 
-        if success:
-            st.success("✅ Expense added successfully")
-        else:
-            st.error("❌ Amount must be greater than zero and category cannot be empty")
+    if success:
+        st.success("✅ Expense added successfully")
+
+        # 🔔 INSTANT ALERT CHECK
+        df = pd.DataFrame(st.session_state.account.transactions)
+        total_income = df[df["Type"] == "Income"]["Amount"].sum()
+        total_expense = df[df["Type"] == "Expense"]["Amount"].sum()
+
+        if total_expense > total_income:
+            st.error("🚨 Alert! Your expenses are now higher than your income!")
+
+    else:
+        st.error("❌ Amount must be greater than zero")
 
 
 # -----------------------------
@@ -133,3 +142,4 @@ elif menu == "View Report":
 
         st.markdown("### 🧾 Transaction History")
         st.dataframe(df, use_container_width=True)
+
