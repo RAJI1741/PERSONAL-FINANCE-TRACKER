@@ -3,6 +3,8 @@ import pandas as pd
 from datetime import datetime, date
 import uuid
 import altair as alt
+from zoneinfo import ZoneInfo
+
 
 # -----------------------------
 # Page Config
@@ -43,7 +45,8 @@ if menu == "Add Transaction":
     with st.form("transaction_form"):
         txn_id = str(uuid.uuid4())[:8]
         txn_date = st.date_input("📅 Date", value=date.today())
-        txn_time = datetime.now().strftime("%H:%M:%S")
+        txn_time = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M:%S")
+
 
         st.markdown("### 💵 Income (optional)")
         income_amount = st.number_input(
@@ -181,3 +184,4 @@ elif menu == "View Report":
         file_name="full_finance_report.csv",
         mime="text/csv"
     )
+
