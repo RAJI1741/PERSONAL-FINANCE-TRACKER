@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
-from datetime import date
+from datetime import datetime, date
 import uuid
+import altair as alt
 
 # -----------------------------
 # Page Config
@@ -42,6 +43,7 @@ if menu == "Add Transaction":
     with st.form("transaction_form"):
         txn_id = str(uuid.uuid4())[:8]
         txn_date = st.date_input("📅 Date", value=date.today())
+        txn_time = datetime.now().strftime("%H:%M:%S")
 
         st.markdown("### 💵 Income (optional)")
         income_amount = st.number_input(
@@ -66,7 +68,6 @@ if menu == "Add Transaction":
             st.error("🚨 Enter at least income or expense")
             st.stop()
 
-        # Validate expense
         if expense_amount > 0 and (
             st.session_state.expense_total + expense_amount >
             st.session_state.income_total + income_amount
@@ -74,40 +75,40 @@ if menu == "Add Transaction":
             st.error("🚨 Expense exceeds available income")
             st.stop()
 
-        # Save income
+        # Save Income
         if income_amount > 0:
             st.session_state.transactions.append({
                 "Transaction ID": txn_id,
                 "Type": "Income",
                 "Amount": income_amount,
                 "Category": income_category,
-                "Date": txn_date
+                "Date": txn_date,
+                "Time": txn_time
             })
             st.session_state.income_total += income_amount
 
-        # Save expense
+        # Save Expense
         if expense_amount > 0:
             st.session_state.transactions.append({
                 "Transaction ID": txn_id,
                 "Type": "Expense",
                 "Amount": expense_amount,
                 "Category": expense_category,
-                "Date": txn_date
+                "Date": txn_date,
+                "Time": txn_time
             })
             st.session_state.expense_total += expense_amount
 
         st.success("🎉 Transaction recorded successfully")
 
-        # -----------------------------
         # Instant Download
-        # -----------------------------
         df = pd.DataFrame(st.session_state.transactions)
         latest_txn = df[df["Transaction ID"] == txn_id]
 
-        st.markdown("### ⬇️ Download Transaction Report")
+        st.markdown("### ⬇️ Download This Transaction")
         st.download_button(
-            label="Download This Transaction (CSV)",
-            data=latest_txn.to_csv(index=False),
+            "Download Transaction CSV",
+            latest_txn.to_csv(index=False),
             file_name=f"transaction_{txn_id}.csv",
             mime="text/csv"
         )
@@ -116,7 +117,7 @@ if menu == "Add Transaction":
 # View Report
 # -----------------------------
 elif menu == "View Report":
-    st.subheader("📊 Financial Summary")
+    st.subheader("📊 Financial Dashboard")
 
     net = st.session_state.income_total - st.session_state.expense_total
 
@@ -132,17 +133,51 @@ elif menu == "View Report":
     df = pd.DataFrame(st.session_state.transactions)
     df["Date"] = pd.to_datetime(df["Date"])
 
-    st.markdown("### 📈 Overview")
-    summary = df.groupby("Type")["Amount"].sum()
-    st.bar_chart(summary)
+    # -----------------------------
+    # Bar Chart
+    # -----------------------------
+    st.markdown("### 📈 Income vs Expense")
+    summary = df.groupby("Type")["Amount"].sum().reset_index()
+    st.bar_chart(summary.set_index("Type"))
 
-    st.markdown("### 🧾 All Transactions")
-    st.dataframe(df, use_container_width=True)
+    # -----------------------------
+    # Pie Chart (Expenses)
+    # -----------------------------
+    expense_df = df[df["Type"] == "Expense"]
 
+    if not expense_df.empty:
+        st.markdown("### 🥧 Expense Breakdown by Category")
+
+        pie_data = (
+            expense_df.groupby("Category")["Amount"]
+            .sum()
+            .reset_index()
+        )
+
+        pie_chart = alt.Chart(pie_data).mark_arc().encode(
+            theta=alt.Theta(field="Amount", type="quantitative"),
+            color=alt.Color(field="Category", type="nominal"),
+            tooltip=["Category", "Amount"]
+        )
+
+        st.altair_chart(pie_chart, use_container_width=True)
+
+    # -----------------------------
+    # Transaction History
+    # -----------------------------
+    st.markdown("### 🧾 Transaction History")
+    st.dataframe(
+        df.sort_values(by=["Date", "Time"], ascending=False),
+        use_container_width=True
+    )
+
+    # -----------------------------
+    # Download Full Report
+    # -----------------------------
     st.markdown("### ⬇️ Download Full Report")
     st.download_button(
-        label="Download Full Report (CSV)",
-        data=df.to_csv(index=False),
+        "Download Full CSV",
+        df.to_csv(index=False),
         file_name="full_finance_report.csv",
         mime="text/csv"
     )
