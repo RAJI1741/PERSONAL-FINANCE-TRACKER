@@ -116,10 +116,10 @@ elif menu == "View Report":
         st.warning("⚠️ No transactions available")
     else:
         df = pd.DataFrame(st.session_state.account.transactions)
-        df["Date"] = pd.to_datetime(df["Date"])
 
         total_income = df[df["Type"] == "Income"]["Amount"].sum()
         total_expense = df[df["Type"] == "Expense"]["Amount"].sum()
+
         net_amount = total_income - total_expense
 
         col1, col2, col3 = st.columns(3)
@@ -129,16 +129,7 @@ elif menu == "View Report":
 
         # 🚨 ALERT CONDITION
         if total_expense > total_income:
-            st.error("🚨 ALERT: Your expenses are higher than your income!")
-        else:
-            st.success("✅ Good job! Your income is covering your expenses.")
-
-        st.metric("Current Balance", f"₹ {st.session_state.account.balance}")
+            st.error("🚨 Alert! Your expenses are higher than your income. Please control spending!")
 
         st.markdown("### 🧾 Transaction History")
         st.dataframe(df, use_container_width=True)
-
-        st.markdown("### 📊 Expense by Category")
-        expense_df = df[df["Type"] == "Expense"]
-        if not expense_df.empty:
-            st.bar_chart(expense_df.groupby("Category")["Amount"].sum())
