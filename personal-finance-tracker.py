@@ -1,8 +1,9 @@
 import streamlit as st
+import pandas as pd
 from datetime import date
 
-st.set_page_config(page_title="Finance Tracker", layout="centered")
-st.title("💰 Personal Finance Tracker (Debug-Safe)")
+st.set_page_config(page_title="Personal Finance Tracker", layout="centered")
+st.title("💰 Personal Finance Tracker")
 
 # -----------------------------
 # Session State
@@ -37,10 +38,13 @@ if menu == "Add Income":
 
     if st.button("Add Income"):
         st.session_state.income_total += amount
-        st.session_state.transactions.append(
-            ("Income", amount, category, d)
-        )
-        st.success("✅ Income added")
+        st.session_state.transactions.append({
+            "Type": "Income",
+            "Amount": amount,
+            "Category": category,
+            "Date": d
+        })
+        st.success("✅ Income added successfully")
 
 # -----------------------------
 # Add Expense
@@ -53,15 +57,19 @@ elif menu == "Add Expense":
     d = st.date_input("Date", value=date.today())
 
     if st.button("Add Expense"):
-        st.session_state.expense_total += amount
-        st.session_state.transactions.append(
-            ("Expense", amount, category, d)
-        )
-        st.success("✅ Expense added")
 
-    # 🚨 ALERT (NO DATAFRAME, NO BUTTON DEPENDENCY)
-    if st.session_state.expense_total > st.session_state.income_total:
-        st.error("🚨 ALERT: Expenses are higher than Income!")
+        # ❌ Block expense if it exceeds income
+        if st.session_state.expense_total + amount > st.session_state.income_total:
+            st.error("🚨 Expense exceeds income! Transaction not allowed.")
+        else:
+            st.session_state.expense_total += amount
+            st.session_state.transactions.append({
+                "Type": "Expense",
+                "Amount": amount,
+                "Category": category,
+                "Date": d
+            })
+            st.success("✅ Expense added successfully")
 
 # -----------------------------
 # View Report
@@ -69,16 +77,22 @@ elif menu == "Add Expense":
 elif menu == "View Report":
     st.subheader("📊 Financial Report")
 
-    st.metric("Total Income", f"₹ {st.session_state.income_total}")
-    st.metric("Total Expense", f"₹ {st.session_state.expense_total}")
-    st.metric(
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Income", f"₹ {st.session_state.income_total}")
+    col2.metric("Total Expense", f"₹ {st.session_state.expense_total}")
+    col3.metric(
         "Net Amount",
         f"₹ {st.session_state.income_total - st.session_state.expense_total}"
     )
 
+    # 🚨 Warning (no operation, only alert)
     if st.session_state.expense_total > st.session_state.income_total:
-        st.error("🚨 ALERT: Expenses are higher than Income!")
+        st.error("🚨 Alert! Expenses are higher than income.")
 
-    st.write("### Transactions")
-    for t in st.session_state.transactions:
-        st.write(t)
+    st.markdown("### 🧾 Transaction History")
+
+    if st.session_state.transactions:
+        df = pd.DataFrame(st.session_state.transactions)
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("No transactions yet.")
