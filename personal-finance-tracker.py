@@ -134,7 +134,8 @@ elif menu == "View Report":
         st.stop()
 
     df = pd.DataFrame(st.session_state.transactions)
-    df["Date"] = pd.to_datetime(df["Date"])
+    df["Date"] = pd.to_datetime(df["Date"]).dt.date
+
 
     # -----------------------------
     # Bar Chart
@@ -184,4 +185,5 @@ elif menu == "View Report":
         file_name="full_finance_report.csv",
         mime="text/csv"
     )
+
 
