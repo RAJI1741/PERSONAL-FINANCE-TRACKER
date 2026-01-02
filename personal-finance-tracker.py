@@ -53,12 +53,14 @@ class Account:
 if "account" not in st.session_state:
     st.session_state.account = Account()
 
+if "expense_alert" not in st.session_state:
+    st.session_state.expense_alert = False
+
 
 # -----------------------------
 # App UI
 # -----------------------------
 st.set_page_config(page_title="Personal Finance Tracker", layout="centered")
-
 st.title("💰 Personal Finance Tracker")
 
 menu = st.sidebar.radio(
@@ -73,7 +75,7 @@ if menu == "Add Income":
     st.subheader("➕ Add Income")
 
     amount = st.number_input("Income Amount", min_value=1.0, step=100.0)
-    category = st.text_input("Income Category (Salary, Bonus, etc.)")
+    category = st.text_input("Income Category")
     trans_date = st.date_input("Date", value=date.today())
 
     if st.button("Add Income"):
@@ -82,8 +84,9 @@ if menu == "Add Income":
 
         if success:
             st.success("✅ Income added successfully")
+            st.session_state.expense_alert = False
         else:
-            st.error("❌ Amount must be greater than zero and category cannot be empty")
+            st.error("❌ Invalid input")
 
 
 # -----------------------------
@@ -93,7 +96,7 @@ elif menu == "Add Expense":
     st.subheader("➖ Add Expense")
 
     amount = st.number_input("Expense Amount", min_value=1.0, step=100.0)
-    category = st.text_input("Expense Category (Food, Rent, Travel, etc.)")
+    category = st.text_input("Expense Category")
     trans_date = st.date_input("Date", value=date.today())
 
     if st.button("Add Expense"):
@@ -101,18 +104,20 @@ elif menu == "Add Expense":
         success = st.session_state.account.add_transaction(expense, "Expense")
 
         if success:
-            st.success("✅ Expense added successfully")
-
-            # 🚨 INSTANT ALERT CHECK
             df = pd.DataFrame(st.session_state.account.transactions)
             total_income = df[df["Type"] == "Income"]["Amount"].sum()
             total_expense = df[df["Type"] == "Expense"]["Amount"].sum()
 
             if total_expense > total_income:
-                st.error("🚨 Alert! Your expenses are now higher than your income!")
+                st.session_state.expense_alert = True
 
+            st.success("✅ Expense added successfully")
         else:
-            st.error("❌ Amount must be greater than zero and category cannot be empty")
+            st.error("❌ Invalid input")
+
+    # 🔔 PERSISTENT ALERT
+    if st.session_state.expense_alert:
+        st.error("🚨 Alert! Your expenses are higher than your income!")
 
 
 # -----------------------------
@@ -135,9 +140,8 @@ elif menu == "View Report":
         col2.metric("Total Expense", f"₹ {total_expense}")
         col3.metric("Net Amount", f"₹ {net_amount}")
 
-        # 🚨 ALERT CONDITION
-        if total_expense > total_income:
-            st.error("🚨 Alert! Your expenses are higher than your income. Please control spending!")
+        if st.session_state.expense_alert:
+            st.error("🚨 Alert! Your expenses are higher than your income!")
 
         st.markdown("### 🧾 Transaction History")
         st.dataframe(df, use_container_width=True)
